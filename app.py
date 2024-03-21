@@ -1,5 +1,6 @@
-from flask import Flask, redirect, render_template
-
+from flask import Flask, redirect, render_template, request
+from flask import request
+from src.models.movie import Movie
 from src.repositories.movie_repository import get_movie_repository
 
 app = Flask(__name__)
@@ -33,7 +34,7 @@ def create_movie():
     director = request.form.get('director')
     rating = int(request.form.get('rating'))
     
-    new_movie = Movie.create_movie(title, director, rating)
+    new_movie = movie_repository.create_movie(title, director, rating)
     # After creating the movie in the database, we redirect to the list all movies page
     return redirect('/movies')
 
@@ -41,13 +42,34 @@ def create_movie():
 @app.get('/movies/search')
 def search_movies():
     # TODO: Feature 3
-    return render_template('search_movies.html', search_active=True)
+     # Retrieve the 'title' query parameter from the URL
+    title = request.args.get('title', '')
+    
+    # These will be used to pass data and messages to the template
+    movie = None
+    message = None
+    
+    if title:  # Search only if a title is provided
+        movie = movie_repository.get_movie_by_title(title)
+        if not movie:
+            message = "No movie found with this title."
+    
+    # Always render the same template, but pass variables that change based on the conditions
+    return render_template('search_movies.html', movie=movie, message=message, title=title, search_active=True)
+
 
 
 @app.get('/movies/<int:movie_id>')
 def get_single_movie(movie_id: int):
     # TODO: Feature 4
-    return render_template('get_single_movie.html')
+    # get movie by id
+    movie = movie_repository.get_movie_by_id(movie_id)
+    if movie:
+        # if movie found, show details
+        return render_template("get_single_movie.html", movie=movie)
+    else:
+        # if not found, return 404
+        return "Movie not found", 404
 
 
 @app.get('/movies/<int:movie_id>/edit')
